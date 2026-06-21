@@ -6,8 +6,10 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.os.RemoteException;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -51,6 +53,10 @@ public abstract class FileSelectAdapter extends RecyclerView.Adapter<FileSelectA
     private OnConfirmFileSelectionListener onConfirmFileSelectionListener;
     private LinkedList<DirPosition> positions = new LinkedList<>();
     private final int fileSystem;
+    //MT管理器式区间选择：右滑标记起点，再次右滑另一项选中整个区间
+    private RemoteFile rangeStartFile;
+    private int rangeStartPosition = -1;
+    private float swipeThresholdPx;
 
     public FileSelectAdapter(Activity context, View loadingView, RecyclerView recyclerView, LinearLayoutManager
             linearLayoutManager, Toolbar fileSelectToolbar, View.OnTouchListener onTouchListener, HFXServer server) {
@@ -63,6 +69,7 @@ public abstract class FileSelectAdapter extends RecyclerView.Adapter<FileSelectA
         this.fileSelectToolbar = fileSelectToolbar;
 
         this.fileSystem = getFileSystem(server);
+        this.swipeThresholdPx = context.getResources().getDisplayMetrics().density * 48f;
 
         layoutInflater = LayoutInflater.from(context);
         jump(getDefaultDir(server));
@@ -145,7 +152,84 @@ public abstract class FileSelectAdapter extends RecyclerView.Adapter<FileSelectA
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(layoutInflater.inflate(R.layout.item_file, parent, false), onTouchListener);
+        ViewHolder holder = new ViewHolder(layoutInflater.inflate(R.layout.item_file, parent, false), onTouchListener);
+        attachSwipeToSelect(holder);
+        return holder;
+    }
+
+    //在每一行上识别“右滑”手势，用于区间选择，同时保留原有的左右焦点切换
+    @SuppressLint("ClickableViewAccessibility")
+    private void attachSwipeToSelect(ViewHolder holder) {
+        final float[] down = new float[2];
+        final boolean[] swiped = {false};
+        holder.itemView.setOnTouchListener((v, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    down[0] = event.getX();
+                    down[1] = event.getY();
+                    swiped[0] = false;
+                    if (onTouchListener != null) {
+                        onTouchListener.onTouch(v, event);//保留切换左右焦点
+                    }
+                    return false;
+                case MotionEvent.ACTION_MOVE:
+                    if (!swiped[0]) {
+                        float dx = event.getX() - down[0];
+                        float dy = event.getY() - down[1];
+                        //横向位移足够大且明显大于纵向位移，判定为右滑
+                        if (dx > swipeThresholdPx && dx > Math.abs(dy) * 2) {
+                            swiped[0] = true;
+                            v.cancelLongPress();//避免触发长按多选
+                            ViewParent parent = v.getParent();
+                            if (parent != null) {
+                                parent.requestDisallowInterceptTouchEvent(true);
+                            }
+                            onSwipeRight(holder);
+                            return true;
+                        }
+                    }
+                    return swiped[0];
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    return swiped[0];//消费掉，避免右滑后误触发点击
+            }
+            return false;
+        });
+    }
+
+    private void onSwipeRight(ViewHolder holder) {
+        int position = holder.getAdapterPosition();
+        if (position <= 0 || position >= files.size()) {
+            return;//跳过“..”及无效位置
+        }
+        RemoteFile item = files.get(position);
+        if (rangeStartFile == null) {
+            //第一次右滑：标记区间起点
+            rangeStartFile = item;
+            rangeStartPosition = position;
+            selectedItems.add(item);
+            updateSelectedCount();
+            notifyItemChanged(position);
+            Toast.makeText(context, R.string.range_start_marked, Toast.LENGTH_SHORT).show();
+        } else {
+            //第二次右滑：以本项为终点，选中起点与终点之间的全部项
+            int startPos = files.indexOf(rangeStartFile);
+            if (startPos == -1) {
+                startPos = rangeStartPosition;
+            }
+            int from = Math.min(startPos, position);
+            int to = Math.max(startPos, position);
+            for (int i = from; i <= to; i++) {
+                if (i == 0) continue;//排除“..”
+                selectedItems.add(files.get(i));
+            }
+            int count = to - from + 1;
+            rangeStartFile = null;
+            rangeStartPosition = -1;
+            updateSelectedCount();
+            notifyDataSetChanged();
+            Toast.makeText(context, context.getString(R.string.range_selected, count), Toast.LENGTH_SHORT).show();
+        }
     }
 
     @SuppressLint("UseCompatLoadingForDrawables")
@@ -177,7 +261,9 @@ public abstract class FileSelectAdapter extends RecyclerView.Adapter<FileSelectA
             holder.fileSize.setText(Utils.formatFileSize(item.getSize()));
         }
         if (selectedItems.contains(item)) {
-            itemView.setBackgroundColor(context.getColor(R.color.blue_background_light));
+            boolean isAnchor = item == rangeStartFile;//区间起点用不同底色区分
+            itemView.setBackgroundColor(context.getColor(isAnchor ?
+                    R.color.range_anchor_background : R.color.blue_background_light));
             holder.fileIcon.setImageDrawable(context.getDrawable(R.drawable.baseline_check_circle_24));
         } else {
             itemView.setBackground(null);
@@ -273,6 +359,9 @@ public abstract class FileSelectAdapter extends RecyclerView.Adapter<FileSelectA
     protected void changeFiles(List<RemoteFile> files) {
         loadingView.setVisibility(View.GONE);
         this.files = files;
+        //目录变化后位置失效，清除区间起点标记
+        rangeStartFile = null;
+        rangeStartPosition = -1;
         notifyDataSetChanged();
         recyclerView.setVisibility(View.VISIBLE);
         recyclerView.scheduleLayoutAnimation();
@@ -401,6 +490,8 @@ public abstract class FileSelectAdapter extends RecyclerView.Adapter<FileSelectA
     @SuppressLint("NotifyDataSetChanged")
     public void cancelSelect() {
         selectedItems.clear();
+        rangeStartFile = null;
+        rangeStartPosition = -1;
         updateSelectedCount();
         notifyDataSetChanged();
     }

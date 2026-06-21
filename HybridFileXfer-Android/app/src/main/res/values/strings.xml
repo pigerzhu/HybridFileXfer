@@ -56,6 +56,8 @@
     <string name="file_delete_success">File deleted successfully!</string>
     <string name="qing_xian_qu_xiao_xuan_ze">Please cancel the selection first!</string>
     <string name="selected_items_count">%1$d items selected</string>
+    <string name="range_start_marked">Range start marked. Swipe right on another item to select the whole range.</string>
+    <string name="range_selected">Selected %1$d items in range</string>
     <string name="jin_ru_mu_lu_shi_bai">Failed to enter directory</string>
     <string name="tiao_zhuan_shi_bai">Jump failed</string>
     <string name="shua_xin_shi_bai">Refresh failed</string>

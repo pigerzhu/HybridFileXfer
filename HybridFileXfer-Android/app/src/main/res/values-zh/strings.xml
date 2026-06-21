@@ -55,6 +55,8 @@
     <string name="file_delete_success">文件删除成功！</string>
     <string name="qing_xian_qu_xiao_xuan_ze">请先取消选择！</string>
     <string name="selected_items_count">已选择 %1$d 项</string>
+    <string name="range_start_marked">已标记区间起点，右滑另一项即可选中整个区间</string>
+    <string name="range_selected">已选中区间内 %1$d 项</string>
     <string name="jin_ru_mu_lu_shi_bai">进入目录失败</string>
     <string name="tiao_zhuan_shi_bai">跳转失败</string>
     <string name="shua_xin_shi_bai">刷新失败</string>

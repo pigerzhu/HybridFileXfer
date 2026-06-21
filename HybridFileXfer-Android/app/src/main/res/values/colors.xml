@@ -5,6 +5,7 @@
     <color name="primary">#212121</color>
     <color name="blue_background_dark">#1E88E5</color>
     <color name="blue_background_light">#E3F2FD</color>
+    <color name="range_anchor_background">#C8E6C9</color>
     <color name="fond">@color/black</color>
     <color name="shadow_end">#59000000</color>
 </resources>
