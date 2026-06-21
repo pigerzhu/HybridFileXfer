@@ -56,6 +56,8 @@
     <string name="file_delete_success">ファイルの削除に成功しました！</string>
     <string name="qing_xian_qu_xiao_xuan_ze">まず選択をキャンセルしてください！</string>
     <string name="selected_items_count">%1$d 項目を選択中</string>
+    <string name="range_start_marked">範囲の開始点をマークしました。別の項目を右にスワイプすると範囲全体を選択します</string>
+    <string name="range_selected">範囲内の %1$d 項目を選択しました</string>
     <string name="jin_ru_mu_lu_shi_bai">ディレクトリに入れませんでした</string>
     <string name="tiao_zhuan_shi_bai">ジャンプに失敗しました</string>
     <string name="shua_xin_shi_bai">更新に失敗しました</string>

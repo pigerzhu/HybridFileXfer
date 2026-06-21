@@ -55,6 +55,8 @@
     <string name="file_delete_success">파일 삭제 성공!</string>
     <string name="qing_xian_qu_xiao_xuan_ze">먼저 선택을 취소하세요!</string>
     <string name="selected_items_count">%1$d 항목 선택됨</string>
+    <string name="range_start_marked">범위 시작점을 표시했습니다. 다른 항목을 오른쪽으로 스와이프하면 전체 범위가 선택됩니다</string>
+    <string name="range_selected">범위 내 %1$d개 항목을 선택했습니다</string>
     <string name="jin_ru_mu_lu_shi_bai">디렉토리 진입 실패</string>
     <string name="tiao_zhuan_shi_bai">이동 실패</string>
     <string name="shua_xin_shi_bai">새로 고침 실패</string>
